@@ -82,7 +82,11 @@ const DefaultCacheControlTTL = "5m"
 //
 // ⚠️ 读取实际生效的版本号请用 CLIVersion()，它会叠加 SUB2API_CLAUDE_CLI_VERSION 覆盖。
 // 直接引用本常量只在"表达内置基线"时才正确（例如覆盖值的下限校验）。
-const CLICurrentVersion = "2.1.258"
+//
+// 分叉基线（opus-5-5 支持下限）：Anthropic 对 claude-opus-5-5 的客户端版本闸门
+// 要求 >= 2.1.280（真实 Claude Code 2.1.280 抓包确认），故内置基线高于上游 0.2.8
+// 的 2.1.258。该基线同时是面板手动值 / 自动同步值 / env 覆盖的统一下限。
+const CLICurrentVersion = "2.1.280"
 
 // FullClaudeCodeMimicryBetas 返回最"像"真实 Claude Code CLI 的完整 beta 列表，
 // 用于 OAuth 账号伪装成 Claude Code 时使用。
@@ -118,7 +122,7 @@ func DefaultHeaders() map[string]string {
 		// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
 		"User-Agent":                                DefaultUserAgent(),
 		"X-Stainless-Lang":                          "js",
-		"X-Stainless-Package-Version":               "0.94.0",
+		"X-Stainless-Package-Version":               "0.112.1",
 		"X-Stainless-OS":                            "Linux",
 		"X-Stainless-Arch":                          "arm64",
 		"X-Stainless-Runtime":                       "node",

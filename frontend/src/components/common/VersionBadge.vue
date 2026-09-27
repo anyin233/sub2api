@@ -651,9 +651,10 @@ import {
 import { useClipboard } from '@/composables/useClipboard'
 import Icon from '@/components/icons/Icon.vue'
 
-const GITHUB_REPO = 'Wei-Shaw/sub2api'
-// Docker Hub image published by CI (tags carry no "v" prefix, e.g. weishaw/sub2api:0.1.146)
-const DOCKER_IMAGE = 'weishaw/sub2api'
+// 分叉独立版本机制：更新/回滚命令生成指向本分叉仓库与本地构建镜像命名，
+// 不再引用上游 weishaw/sub2api Docker Hub。
+const GITHUB_REPO = 'anyin233/sub2api'
+const DOCKER_IMAGE = 'sub2api'
 
 const { t } = useI18n()
 
