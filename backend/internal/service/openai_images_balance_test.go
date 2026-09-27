@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +33,14 @@ func (r *openAIImagesBalanceRepo) SetModelRateLimit(_ context.Context, _ int64, 
 	return nil
 }
 
+// openAIImagesBalanceUpstream 内嵌 HTTPUpstream 并覆写 Do 塑造每测试响应；
+// 网关现在走 DoWithTLS，若不覆写会被内嵌 nil 字段的 promoted 方法接住而 panic
+// —— 与 chatRoleContractUpstream 的处理方式一致。
 type openAIImagesBalanceUpstream struct{ HTTPUpstream }
+
+func (u openAIImagesBalanceUpstream) DoWithTLS(req *http.Request, proxyURL string, accountID int64, accountConcurrency int, _ *tlsfingerprint.Profile) (*http.Response, error) {
+	return u.Do(req, proxyURL, accountID, accountConcurrency)
+}
 
 func (openAIImagesBalanceUpstream) Do(*http.Request, string, int64, int) (*http.Response, error) {
 	return &http.Response{

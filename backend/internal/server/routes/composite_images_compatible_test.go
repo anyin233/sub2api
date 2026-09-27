@@ -15,6 +15,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
 	servermiddleware "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -67,6 +68,12 @@ func (u *compatibleImagesUpstream) Do(req *http.Request, _ string, id int64, _ i
 	return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"application/json"}, "X-Request-Id": {"compatible-image-test"}}, Body: io.NopCloser(strings.NewReader(`{"data":[{"b64_json":"aW1hZ2U="}]}`))}, nil
 }
 
+// DoWithTLS 覆写：网关走 DoWithTLS，promoted 的内嵌回退会静态调 u.Do 绕过本桩
+// 的记录逻辑并得到 nil 响应，这里转发到自己的 Do 保持行为一致。
+func (u *compatibleImagesUpstream) DoWithTLS(req *http.Request, proxyURL string, id int64, concurrency int, _ *tlsfingerprint.Profile) (*http.Response, error) {
+	return u.Do(req, proxyURL, id, concurrency)
+}
+
 type compatibleImagesUsage struct {
 	service.UsageLogRepository
 	logs []*service.UsageLog
@@ -103,7 +110,7 @@ func TestCompositeCompatibleImagesEndToEnd(t *testing.T) {
 			upstream, usage := &compatibleImagesUpstream{}, &compatibleImagesUsage{}
 			billingCache := service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, cfg, nil)
 			t.Cleanup(billingCache.Stop)
-			gateway := service.NewOpenAIGatewayService(repo, usage, nil, nil, nil, nil, nil, cfg, nil, nil, service.NewBillingService(cfg, nil), nil, billingCache, upstream, &service.DeferredService{}, nil, nil, nil, nil, nil, nil, nil)
+			gateway := service.NewOpenAIGatewayService(repo, usage, nil, nil, nil, nil, nil, cfg, nil, nil, service.NewBillingService(cfg, nil), nil, billingCache, upstream, nil, &service.DeferredService{}, nil, nil, nil, nil, nil, nil, nil)
 			imagesHandler := handler.NewOpenAIGatewayHandler(gateway, service.NewConcurrencyService(nil), billingCache, service.NewAPIKeyService(nil, nil, nil, nil, nil, nil, cfg), nil, nil, nil, nil, cfg)
 			publicModel := model
 			if scenario == "multipart_alias" {
