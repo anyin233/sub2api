@@ -128,7 +128,8 @@ func defaultFingerprint() Fingerprint {
 		StainlessOS:             "Linux",
 		StainlessArch:           "arm64",
 		StainlessRuntime:        "node",
-		StainlessRuntimeVersion: "v24.3.0",
+		// 对齐真实 Claude Code 2.1.283（内嵌 Bun v1.4.3 报 v26.3.0）。
+		StainlessRuntimeVersion: "v26.3.0",
 	}
 }
 
