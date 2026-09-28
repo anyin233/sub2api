@@ -17,14 +17,14 @@ import (
 
 // OMP (oh-my-pi) server-side compaction 兼容：mimic 路径窄口径保留 compact beta。
 func TestCompactionBetaOAuthMimic(t *testing.T) {
-	const onDemand = claude.BetaCompaction          // compact-2026-09-04
-	const legacy = claude.BetaCompactionLegacy      // compact-2026-01-12
+	const onDemand = claude.BetaCompaction     // compact-2026-09-04
+	const legacy = claude.BetaCompactionLegacy // compact-2026-01-12
 	for _, tc := range []struct {
 		name   string
 		header string
 		drop   map[string]struct{}
 		want   bool
-	}{ {"explicit on-demand", onDemand, nil, true},
+	}{{"explicit on-demand", onDemand, nil, true},
 		{"explicit legacy", legacy, nil, true},
 		{"both", onDemand + "," + legacy, nil, true},
 		{"mixed with unknown", "custom-beta," + onDemand, nil, true},

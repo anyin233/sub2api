@@ -1772,33 +1772,33 @@ func TestGatewayService_AnthropicAPIKeyPassthrough_Non2xxRecordsOllamaActivity(t
 
 func TestOpus55RejectsUnsupportedParametersBeforeMimicry(t *testing.T) {
 	for _, upstream := range []string{"claude-opus-5-5", "claude-sonnet-5-5"} {
-	for _, typ := range []string{AccountTypeOAuth, AccountTypeAPIKey} {
-		for _, field := range []string{`"thinking":{"type":"disabled"}`, `"thinking":{"type":"enabled","budget_tokens":1024}`, `"tool_choice":{"type":"any"}`, `"tool_choice":{"type":"tool","name":"lookup"}`} {
-			for _, count := range []bool{false, true} {
-				rec := httptest.NewRecorder()
-				c, _ := gin.CreateTestContext(rec)
-				c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
-				model := upstream
-				account := &Account{ID: 1, Platform: PlatformAnthropic, Type: typ}
-				if typ == AccountTypeAPIKey {
-					model = "public-opus"
-					account.Credentials = map[string]any{"model_mapping": map[string]any{model: upstream}}
+		for _, typ := range []string{AccountTypeOAuth, AccountTypeAPIKey} {
+			for _, field := range []string{`"thinking":{"type":"disabled"}`, `"thinking":{"type":"enabled","budget_tokens":1024}`, `"tool_choice":{"type":"any"}`, `"tool_choice":{"type":"tool","name":"lookup"}`} {
+				for _, count := range []bool{false, true} {
+					rec := httptest.NewRecorder()
+					c, _ := gin.CreateTestContext(rec)
+					c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+					model := upstream
+					account := &Account{ID: 1, Platform: PlatformAnthropic, Type: typ}
+					if typ == AccountTypeAPIKey {
+						model = "public-opus"
+						account.Credentials = map[string]any{"model_mapping": map[string]any{model: upstream}}
+					}
+					body := []byte(`{"model":"` + model + `","messages":[{"role":"user","content":"hello"}],` + field + `}`)
+					parsed := &ParsedRequest{Model: model, Body: NewRequestBodyRef(body)}
+					svc := &GatewayService{}
+					var err error
+					if count {
+						err = svc.ForwardCountTokens(context.Background(), c, account, parsed)
+					} else {
+						_, err = svc.Forward(context.Background(), c, account, parsed)
+					}
+					require.Error(t, err)
+					require.Equal(t, http.StatusBadRequest, rec.Code)
+					require.Contains(t, rec.Body.String(), "invalid_request_error")
 				}
-				body := []byte(`{"model":"` + model + `","messages":[{"role":"user","content":"hello"}],` + field + `}`)
-				parsed := &ParsedRequest{Model: model, Body: NewRequestBodyRef(body)}
-				svc := &GatewayService{}
-				var err error
-				if count {
-					err = svc.ForwardCountTokens(context.Background(), c, account, parsed)
-				} else {
-					_, err = svc.Forward(context.Background(), c, account, parsed)
-				}
-				require.Error(t, err)
-				require.Equal(t, http.StatusBadRequest, rec.Code)
-				require.Contains(t, rec.Body.String(), "invalid_request_error")
 			}
 		}
-	}
 	}
 }
 

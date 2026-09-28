@@ -122,7 +122,7 @@ var (
 		CacheReadInputTokenCost: 0.2e-6,
 		// Sonnet 5.5 无 Fast/priority 档（官方未提供），priority 字段与标准价一致，
 		// 防止上游误标 priority 时按 2 倍收费。
-		InputCostPerTokenPriority:           2e-6, OutputCostPerTokenPriority: 10e-6,
+		InputCostPerTokenPriority: 2e-6, OutputCostPerTokenPriority: 10e-6,
 		CacheCreationInputTokenCostPriority: 2.5e-6, CacheReadInputTokenCostPriority: 0.2e-6,
 		SupportsServiceTier: true, LiteLLMProvider: "anthropic", Mode: "chat", SupportsPromptCaching: true,
 	}

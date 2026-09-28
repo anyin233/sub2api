@@ -24,8 +24,8 @@ const (
 	// 真实 Claude Code CLI 不发送它们（不属于 CC 指纹），因此不加入
 	// FullClaudeCodeMimicryBetas；仅当客户端显式请求时在 mimic 路径窄口径
 	// 透传（与上游 PR #7638 structured-outputs 的先例同模式）。
-	BetaCompaction        = "compact-2026-09-04"
-	BetaCompactionLegacy  = "compact-2026-01-12"
+	BetaCompaction       = "compact-2026-09-04"
+	BetaCompactionLegacy = "compact-2026-01-12"
 
 	// 新增（对齐官方 CLI 2.1.9x 以来的流量）
 	BetaPromptCachingScope          = "prompt-caching-scope-2026-01-05"
@@ -40,11 +40,11 @@ const (
 	// beta 集合零新增，仅移除 legacy compact token；下述 beta 维持 2.1.283 逆向结果）：
 	// 以下 beta 在首方 OAuth + agentic + interleaved thinking
 	// 的标准请求形态下会被真实 CLI 携带。
-	BetaThinkingTokenCount        = "thinking-token-count-2026-05-13"  // first-party && interleaved thinking
-	BetaPromptCachingEvict        = "prompt-caching-evict-2026-05-12"  // evictCacheOnComplete 路径
-	BetaThinkingResumption        = "thinking-resumption-2026-07-17"   // thinking resumable
-	BetaThinkingDisplayUpdates    = "thinking-display-updates-2026-08-18" // thinking display updates
-	BetaMidConversationSystem     = "mid-conversation-system-2026-04-07"  // opus-5-5 等模型 capability
+	BetaThinkingTokenCount     = "thinking-token-count-2026-05-13"     // first-party && interleaved thinking
+	BetaPromptCachingEvict     = "prompt-caching-evict-2026-05-12"     // evictCacheOnComplete 路径
+	BetaThinkingResumption     = "thinking-resumption-2026-07-17"      // thinking resumable
+	BetaThinkingDisplayUpdates = "thinking-display-updates-2026-08-18" // thinking display updates
+	BetaMidConversationSystem  = "mid-conversation-system-2026-04-07"  // opus-5-5 等模型 capability
 
 	// server-side refusal fallback beta 字段族（beta Messages API 专有）。
 	// 客户端（Claude Code / SDK / OpenCode 等）会默认透传 body.fallbacks /
@@ -142,12 +142,12 @@ func DefaultHeaders() map[string]string {
 		// Keep these in sync with recent Claude CLI traffic to reduce the chance
 		// that Claude Code-scoped OAuth credentials are rejected as "non-CLI" usage.
 		// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
-		"User-Agent":                                DefaultUserAgent(),
-		"X-Stainless-Lang":                          "js",
-		"X-Stainless-Package-Version":               "0.113.0",
-		"X-Stainless-OS":                            "Linux",
-		"X-Stainless-Arch":                          "arm64",
-		"X-Stainless-Runtime":                       "node",
+		"User-Agent":                  DefaultUserAgent(),
+		"X-Stainless-Lang":            "js",
+		"X-Stainless-Package-Version": "0.113.0",
+		"X-Stainless-OS":              "Linux",
+		"X-Stainless-Arch":            "arm64",
+		"X-Stainless-Runtime":         "node",
 		// 真实 Claude Code 2.1.284 内嵌 Bun 运行时报告 process.version=v26.3.0
 		//（2026-09-28 本机 2.1.284 二进制 strings 实证；2.1.283 同为 v26.3.0）。
 		"X-Stainless-Runtime-Version":               "v26.3.0",
