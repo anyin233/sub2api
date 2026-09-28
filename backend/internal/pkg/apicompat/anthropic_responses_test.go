@@ -1820,23 +1820,25 @@ func TestAnthropicEventToResponses_CacheTokensFromMessageDelta(t *testing.T) {
 }
 
 func TestOpus55ResponsesAdaptiveThinkingAndToolChoice(t *testing.T) {
-	for _, effort := range []string{"", "low", "medium", "high", "xhigh", "max"} {
-		req := &ResponsesRequest{Model: "claude-opus-5-5", Input: json.RawMessage(`"hello"`), Reasoning: &ResponsesReasoning{Effort: effort}}
-		out, err := ResponsesToAnthropicRequest(req)
-		require.NoError(t, err)
-		require.Equal(t, "adaptive", out.Thinking.Type)
-		require.Zero(t, out.Thinking.BudgetTokens)
-		if effort == "" {
-			effort = "medium"
+	for _, model := range []string{"claude-opus-5-5", "claude-sonnet-5-5"} {
+		for _, effort := range []string{"", "low", "medium", "high", "xhigh", "max"} {
+			req := &ResponsesRequest{Model: model, Input: json.RawMessage(`"hello"`), Reasoning: &ResponsesReasoning{Effort: effort}}
+			out, err := ResponsesToAnthropicRequest(req)
+			require.NoError(t, err)
+			require.Equal(t, "adaptive", out.Thinking.Type)
+			require.Zero(t, out.Thinking.BudgetTokens)
+			if effort == "" {
+				effort = "medium"
+			}
+			require.Equal(t, effort, out.OutputConfig.Effort)
 		}
-		require.Equal(t, effort, out.OutputConfig.Effort)
+		for _, choice := range []string{`"required"`, `{"type":"function","name":"lookup"}`} {
+			_, err := ResponsesToAnthropicRequest(&ResponsesRequest{Model: model, Input: json.RawMessage(`"hello"`), ToolChoice: json.RawMessage(choice)})
+			require.ErrorContains(t, err, "forced tool_choice")
+		}
+		_, err := ResponsesToAnthropicRequest(&ResponsesRequest{Model: model, Input: json.RawMessage(`"hello"`), Reasoning: &ResponsesReasoning{Effort: "none"}})
+		require.ErrorContains(t, err, "reasoning effort")
 	}
-	for _, choice := range []string{`"required"`, `{"type":"function","name":"lookup"}`} {
-		_, err := ResponsesToAnthropicRequest(&ResponsesRequest{Model: "claude-opus-5-5", Input: json.RawMessage(`"hello"`), ToolChoice: json.RawMessage(choice)})
-		require.ErrorContains(t, err, "forced tool_choice")
-	}
-	_, err := ResponsesToAnthropicRequest(&ResponsesRequest{Model: "claude-opus-5-5", Input: json.RawMessage(`"hello"`), Reasoning: &ResponsesReasoning{Effort: "none"}})
-	require.ErrorContains(t, err, "reasoning effort")
 	old, err := ResponsesToAnthropicRequest(&ResponsesRequest{Model: "claude-opus-5", Input: json.RawMessage(`"hello"`), Reasoning: &ResponsesReasoning{Effort: "xhigh"}})
 	require.NoError(t, err)
 	require.Equal(t, "max", old.OutputConfig.Effort)

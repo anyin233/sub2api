@@ -485,6 +485,7 @@ func TestOpus55ResponsesSignedThinkingBufferedAndStreamed(t *testing.T) {
 }
 
 func TestOpus55BridgeUsesMappedModelBeforeThinkingConversion(t *testing.T) {
+	for _, upstream := range []string{"claude-opus-5-5", "claude-sonnet-5-5"} {
 	for _, chat := range []bool{false, true} {
 		for _, forced := range []bool{false, true} {
 			rec := httptest.NewRecorder()
@@ -499,7 +500,7 @@ func TestOpus55BridgeUsesMappedModelBeforeThinkingConversion(t *testing.T) {
 			c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(body))
 			upstream := &anthropicHTTPUpstreamRecorder{resp: &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(namespaceToolAnthropicStream()))}}
 			svc := &GatewayService{cfg: &config.Config{}, httpUpstream: upstream}
-			account := &Account{ID: 1, Platform: PlatformAnthropic, Type: AccountTypeAPIKey, Credentials: map[string]any{"api_key": "fixture-key", "model_mapping": map[string]any{"public-opus": "claude-opus-5-5"}}}
+			account := &Account{ID: 1, Platform: PlatformAnthropic, Type: AccountTypeAPIKey, Credentials: map[string]any{"api_key": "fixture-key", "model_mapping": map[string]any{"public-opus": upstream}}}
 			var err error
 			var result *ForwardResult
 			if chat {
@@ -515,11 +516,12 @@ func TestOpus55BridgeUsesMappedModelBeforeThinkingConversion(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
 				require.NotNil(t, upstream.lastReq)
-				require.Equal(t, "claude-opus-5-5", gjson.GetBytes(upstream.lastBody, "model").String())
+				require.Equal(t, upstream, gjson.GetBytes(upstream.lastBody, "model").String())
 				require.Equal(t, "adaptive", gjson.GetBytes(upstream.lastBody, "thinking.type").String())
 				require.Equal(t, "xhigh", gjson.GetBytes(upstream.lastBody, "output_config.effort").String())
 				require.False(t, gjson.GetBytes(upstream.lastBody, "thinking.budget_tokens").Exists())
 			}
+		}
 		}
 	}
 }

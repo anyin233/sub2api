@@ -114,16 +114,17 @@ func newClaudeCodeVersionSyncService(
 // 同仓库可能混入非 v 前缀 tag 与预发布 / 草稿，必须只认 v 前缀的稳定版，
 // 否则会把无关 tag 的版本号当成客户端版本同步出去。
 func TestLatestClaudeCodeStableReleaseVersion(t *testing.T) {
+	// 内置基线已升至 2.1.284（sonnet-5-5 支持下限），夹具合法稳定版需 >= 基线。
 	releases := []*GitHubRelease{
-		{TagName: "v2.1.284-beta.1", Prerelease: true},
+		{TagName: "v2.1.285-beta.1", Prerelease: true},
+		{TagName: "v2.1.284"},
 		{TagName: "v2.1.283"},
-		{TagName: "v2.1.282"},
 		{TagName: "v2.999.0", Draft: true},
 		{TagName: "not-a-tag"},
 		nil,
 	}
 
-	require.Equal(t, "2.1.283", latestClaudeCodeStableReleaseVersion(releases))
+	require.Equal(t, "2.1.284", latestClaudeCodeStableReleaseVersion(releases))
 	require.Empty(t, latestClaudeCodeStableReleaseVersion(nil))
 	require.Empty(t, latestClaudeCodeStableReleaseVersion([]*GitHubRelease{{TagName: "not-a-tag"}}))
 	// 预发布 tag 即使漏标 Prerelease 也要被版本号后缀挡住。

@@ -2037,3 +2037,36 @@ func TestNewModelPricingAliasesRetainExplicitOverrides(t *testing.T) {
 		require.Same(t, zero, svc.GetModelPricing(model))
 	}
 }
+
+func TestSonnet55PricingFallbackAndFastExclusion(t *testing.T) {
+	svc := newTestBillingService()
+
+	prices, err := svc.GetModelPricing("claude-sonnet-5-5")
+	require.NoError(t, err)
+	require.Equal(t, 2e-6, prices.InputPricePerToken)
+	require.Equal(t, 10e-6, prices.OutputPricePerToken)
+	require.Equal(t, 2.5e-6, prices.CacheCreationPricePerToken)
+	require.Equal(t, 4e-6, prices.CacheCreation1hPrice)
+	require.Equal(t, 0.2e-6, prices.CacheReadPricePerToken)
+
+	// Sonnet 5.5 没有 Fast 档：applyModelSpecificPricingPolicyEx 不得附加 2x 倍率。
+	require.Nil(t, prices.FastMultiplier)
+	fast, err := svc.CalculateCostWithServiceTier("claude-sonnet-5-5", UsageTokens{InputTokens: 1_000_000, OutputTokens: 1000}, 1, "fast")
+	require.NoError(t, err)
+	plain, err := svc.CalculateCostWithServiceTier("claude-sonnet-5-5", UsageTokens{InputTokens: 1_000_000, OutputTokens: 1000}, 1, "")
+	require.NoError(t, err)
+	require.InDelta(t, plain.TotalCost, fast.TotalCost, 1e-9)
+
+	// 别名/后缀都命中同一家族价格。
+	for _, alias := range []string{"claude-sonnet-5-5-thinking", "anthropic/claude-sonnet-5-5"} {
+		p, err := svc.GetModelPricing(alias)
+		require.NoError(t, err)
+		require.Equal(t, 2e-6, p.InputPricePerToken, alias)
+	}
+
+	// sonnet-5 不得被 sonnet-5-5 目录键模糊误命中，且按官方 $2/$10 计费。
+	p5, err := svc.GetModelPricing("claude-sonnet-5")
+	require.NoError(t, err)
+	require.Equal(t, 2e-6, p5.InputPricePerToken)
+	require.Equal(t, 10e-6, p5.OutputPricePerToken)
+}

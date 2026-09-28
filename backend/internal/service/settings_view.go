@@ -662,6 +662,8 @@ func DefaultBetaPolicySettings() *BetaPolicySettings {
 					// 直连 Anthropic API（客户端请求 model 原样）
 					"claude-sonnet-5",
 					"claude-sonnet-5-*",
+					"claude-sonnet-5-5",
+					"claude-sonnet-5-5-*",
 					// Vertex AI 走 normalizeVertexAnthropicModelID 后 "@YYYYMMDD" 格式
 					"claude-sonnet-5@*",
 					// AWS Bedrock cross-region inference profile

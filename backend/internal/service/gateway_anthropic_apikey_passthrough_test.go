@@ -1771,17 +1771,18 @@ func TestGatewayService_AnthropicAPIKeyPassthrough_Non2xxRecordsOllamaActivity(t
 }
 
 func TestOpus55RejectsUnsupportedParametersBeforeMimicry(t *testing.T) {
+	for _, upstream := range []string{"claude-opus-5-5", "claude-sonnet-5-5"} {
 	for _, typ := range []string{AccountTypeOAuth, AccountTypeAPIKey} {
 		for _, field := range []string{`"thinking":{"type":"disabled"}`, `"thinking":{"type":"enabled","budget_tokens":1024}`, `"tool_choice":{"type":"any"}`, `"tool_choice":{"type":"tool","name":"lookup"}`} {
 			for _, count := range []bool{false, true} {
 				rec := httptest.NewRecorder()
 				c, _ := gin.CreateTestContext(rec)
 				c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
-				model := "claude-opus-5-5"
+				model := upstream
 				account := &Account{ID: 1, Platform: PlatformAnthropic, Type: typ}
 				if typ == AccountTypeAPIKey {
 					model = "public-opus"
-					account.Credentials = map[string]any{"model_mapping": map[string]any{model: "claude-opus-5-5"}}
+					account.Credentials = map[string]any{"model_mapping": map[string]any{model: upstream}}
 				}
 				body := []byte(`{"model":"` + model + `","messages":[{"role":"user","content":"hello"}],` + field + `}`)
 				parsed := &ParsedRequest{Model: model, Body: NewRequestBodyRef(body)}
@@ -1798,6 +1799,7 @@ func TestOpus55RejectsUnsupportedParametersBeforeMimicry(t *testing.T) {
 			}
 		}
 	}
+	}
 }
 
 func TestOpus55ThinkingDefaultPreservesSignedHistory(t *testing.T) {
@@ -1808,6 +1810,18 @@ func TestOpus55ThinkingDefaultPreservesSignedHistory(t *testing.T) {
 	out, _ := normalizeClaudeOAuthRequestBody(body, "claude-opus-5-5", claudeOAuthNormalizeOptions{})
 	require.Equal(t, "none", gjson.GetBytes(out, "tool_choice.type").String())
 	require.False(t, gjson.GetBytes(out, "output_config.effort").Exists(), "omission uses the official medium default")
+	require.Equal(t, "omitted", gjson.GetBytes(out, "thinking.display").String())
+	require.JSONEq(t, gjson.GetBytes(body, "messages").Raw, gjson.GetBytes(out, "messages").Raw)
+}
+
+func TestSonnet55ThinkingDefaultPreservesSignedHistory(t *testing.T) {
+	body := []byte(`{"model":"claude-sonnet-5-5","messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"","signature":"signed"},{"type":"redacted_thinking","data":"encrypted"},{"type":"tool_use","id":"toolu_1","name":"lookup","input":{}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"ok"}]}],"tool_choice":{"type":"none"},"thinking":{"type":"adaptive","display":"omitted"}}`)
+	require.Equal(t, string(body), string(FilterThinkingBlocks(body, "claude-sonnet-5-5")))
+	withoutThinking, _ := deleteJSONPathBytes(body, "thinking")
+	require.Equal(t, string(withoutThinking), string(FilterThinkingBlocks(withoutThinking, "claude-sonnet-5-5")))
+	out, _ := normalizeClaudeOAuthRequestBody(body, "claude-sonnet-5-5", claudeOAuthNormalizeOptions{})
+	require.Equal(t, "none", gjson.GetBytes(out, "tool_choice.type").String())
+	require.False(t, gjson.GetBytes(out, "temperature").Exists(), "Sonnet 5.5 rejects sampling params; mimic must not inject temperature=1")
 	require.Equal(t, "omitted", gjson.GetBytes(out, "thinking.display").String())
 	require.JSONEq(t, gjson.GetBytes(body, "messages").Raw, gjson.GetBytes(out, "messages").Raw)
 }

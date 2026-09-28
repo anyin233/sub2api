@@ -116,6 +116,16 @@ var (
 		CacheCreationInputTokenCostPriority: 10e-6, CacheReadInputTokenCostPriority: 0.4e-6,
 		SupportsServiceTier: true, LiteLLMProvider: "anthropic", Mode: "chat", SupportsPromptCaching: true,
 	}
+	claudeSonnet55FallbackPricing = &LiteLLMModelPricing{
+		InputCostPerToken: 2e-6, OutputCostPerToken: 10e-6,
+		CacheCreationInputTokenCost: 2.5e-6, CacheCreationInputTokenCostAbove1hr: 4e-6,
+		CacheReadInputTokenCost: 0.2e-6,
+		// Sonnet 5.5 无 Fast/priority 档（官方未提供），priority 字段与标准价一致，
+		// 防止上游误标 priority 时按 2 倍收费。
+		InputCostPerTokenPriority:           2e-6, OutputCostPerTokenPriority: 10e-6,
+		CacheCreationInputTokenCostPriority: 2.5e-6, CacheReadInputTokenCostPriority: 0.2e-6,
+		SupportsServiceTier: true, LiteLLMProvider: "anthropic", Mode: "chat", SupportsPromptCaching: true,
+	}
 	openAIGPT56SolFallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:                   5e-06,
 		InputCostPerTokenPriority:           1e-05,
@@ -1379,6 +1389,12 @@ func (s *PricingService) matchByModelFamily(model string) *LiteLLMModelPricing {
 		}
 		return claudeOpus55FallbackPricing
 	}
+	if claude.IsSonnet55(model) {
+		if pricing, ok := s.pricingData["claude-sonnet-5-5"]; ok {
+			return pricing
+		}
+		return claudeSonnet55FallbackPricing
+	}
 	// modelFamily 定义一个模型系列的匹配和定价查找规则。
 	type modelFamily struct {
 		name    string   // 系列名称
@@ -1398,6 +1414,10 @@ func (s *PricingService) matchByModelFamily(model string) *LiteLLMModelPricing {
 		{name: "opus-4.6", match: []string{"claude-opus-4-6", "claude-opus-4.6"}},
 		{name: "opus-4.5", match: []string{"claude-opus-4-5", "claude-opus-4.5"}},
 		{name: "opus-4", match: []string{"claude-opus-4", "claude-3-opus"}},
+		// Sonnet 5 与 Sonnet 5.5 同为 tier_2_10（$2/$10 per MTok）。sonnet-5 系列
+		// 查找必须排除 claude-sonnet-5-5 目录键（子串包含），否则 5 会被 5.5 的
+		// 目录条目模糊命中；IsSonnet55 已在上面提前返回，此处仅服务 claude-sonnet-5。
+		{name: "sonnet-5", match: []string{"claude-sonnet-5"}, pricing: []string{"claude-sonnet-5"}},
 		{name: "sonnet-4.5", match: []string{"claude-sonnet-4-5", "claude-sonnet-4.5"}},
 		{name: "sonnet-4", match: []string{"claude-sonnet-4", "claude-3-5-sonnet"}},
 		{name: "sonnet-3.5", match: []string{"claude-3-5-sonnet", "claude-3.5-sonnet"}},
@@ -1442,6 +1462,10 @@ func (s *PricingService) matchByModelFamily(model string) *LiteLLMModelPricing {
 			}
 		case strings.Contains(model, "sonnet"):
 			switch {
+			case strings.Contains(model, "5-5") || strings.Contains(model, "5.5"):
+				fallbackName = "sonnet-5"
+			case strings.Contains(model, "5"):
+				fallbackName = "sonnet-5"
 			case strings.Contains(model, "4.5") || strings.Contains(model, "4-5"):
 				fallbackName = "sonnet-4.5"
 			case strings.Contains(model, "3-5") || strings.Contains(model, "3.5"):
@@ -1480,6 +1504,9 @@ func (s *PricingService) matchByModelFamily(model string) *LiteLLMModelPricing {
 		for key, pricing := range s.pricingData {
 			keyLower := strings.ToLower(key)
 			if matched.name == "opus-5" && claude.IsOpus55(keyLower) {
+				continue
+			}
+			if matched.name == "sonnet-5" && claude.IsSonnet55(keyLower) {
 				continue
 			}
 			if strings.Contains(keyLower, pattern) {
