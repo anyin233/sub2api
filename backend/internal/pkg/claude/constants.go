@@ -18,6 +18,14 @@ const (
 	BetaTokenCounting            = "token-counting-2024-11-01"
 	BetaContext1M                = "context-1m-2025-08-07"
 	BetaFastMode                 = "fast-mode-2026-02-01"
+	// Compaction beta 字段族：OMP (oh-my-pi) 等 SDK 的 server-side compaction
+	// (body.compaction / context_management.edits[type=compact_20260112] /
+	// 回放块 {type:"compaction",content,signature}) 依赖这两个 token。
+	// 真实 Claude Code CLI 不发送它们（不属于 CC 指纹），因此不加入
+	// FullClaudeCodeMimicryBetas；仅当客户端显式请求时在 mimic 路径窄口径
+	// 透传（与上游 PR #7638 structured-outputs 的先例同模式）。
+	BetaCompaction        = "compact-2026-09-04"
+	BetaCompactionLegacy  = "compact-2026-01-12"
 
 	// 新增（对齐官方 CLI 2.1.9x 以来的流量）
 	BetaPromptCachingScope          = "prompt-caching-scope-2026-01-05"

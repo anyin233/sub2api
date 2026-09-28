@@ -509,9 +509,24 @@ func (s *GatewayService) computeFinalAnthropicBeta(
 
 	if tokenType == "oauth" {
 		if mimicClaudeCode {
-			// mimic 路径跳过白名单透传，incomingBeta 始终为空；所有模型都必须
+			// mimic 路径跳过白名单透传，incomingBeta 默认为空；所有模型都必须
 			// 携带完整 Claude Code beta 集合，避免 Haiku 被识别为第三方客户端。
-			return mergeAnthropicBetaDropping(claude.FullClaudeCodeMimicryBetas(), "", effectiveDropSet), true
+			// 窄口径兼容：客户端（OMP 等 SDK）显式请求 server-side compaction
+			// 时保留其 compact beta。这两个 token 不属于 CC 指纹（真实 CLI 不发），
+			// 但也只是能力开关，不会触发第三方判定；而 body.compaction /
+			// context_management.edits[type=compact_20260112] 若失去对应 token
+			// 会被上游 400。与 structured-outputs 兼容 token 同模式。
+			var incomingBeta string
+			for _, token := range []string{claude.BetaCompaction, claude.BetaCompactionLegacy} {
+				if containsBetaToken(clientBeta, token) {
+					if incomingBeta == "" {
+						incomingBeta = token
+					} else {
+						incomingBeta = incomingBeta + "," + token
+					}
+				}
+			}
+			return mergeAnthropicBetaDropping(claude.FullClaudeCodeMimicryBetas(), incomingBeta, effectiveDropSet), true
 		}
 		// 真 Claude Code 客户端透传路径
 		return stripBetaTokensWithSet(s.getBetaHeader(modelID, clientBeta), effectiveDropSet), true

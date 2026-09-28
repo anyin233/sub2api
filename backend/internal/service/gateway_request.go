@@ -1000,6 +1000,16 @@ func sanitizeAnthropicBodyForBetaTokens(body []byte, anthropicBetaHeader string)
 		body, changed = b, true
 	}
 
+	// body.compaction：OMP (oh-my-pi) 按需 server-side compaction 参数，
+	// 仅接受 compact-2026-09-04。缺 token 时上游 400
+	// "compaction: this parameter requires anthropic-beta: compact-2026-09-04"。
+	// 保留条件：含 compact-2026-09-04。
+	if b, deleted := stripAnthropicBodyFieldUnlessBeta(
+		body, "compaction", anthropicBetaHeader, claude.BetaCompaction,
+	); deleted {
+		body, changed = b, true
+	}
+
 	return body, changed
 }
 
