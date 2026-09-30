@@ -104,14 +104,15 @@ const DefaultCacheControlTTL = "5m"
 // ⚠️ 读取实际生效的版本号请用 CLIVersion()，它会叠加 SUB2API_CLAUDE_CLI_VERSION 覆盖。
 // 直接引用本常量只在"表达内置基线"时才正确（例如覆盖值的下限校验）。
 //
-// 分叉基线（opus-5-5 / sonnet-5-5 支持下限）：跟随官方 CLI 当前 stable，2026-09-28
-// 更新为 2.1.284（npm latest 实测；sonnet-5-5 于同日发布并已进入该版内置模型目录）。
+// 分叉基线（opus-5-5 / sonnet-5-5 支持下限）：跟随官方 CLI 当前 stable，2026-09-30
+// 更新为 2.1.285（npm latest 实测；gpt-6.1-sol 发布次日，284→285 beta 集合经二进制
+// 比对无变化，仅版本号推进）。
 // 该基线同时是面板手动值 / 自动同步值 / env 覆盖的统一下限。
-const CLICurrentVersion = "2.1.284"
+const CLICurrentVersion = "2.1.285"
 
 // FullClaudeCodeMimicryBetas 返回最"像"真实 Claude Code CLI 的完整 beta 列表，
 // 用于 OAuth 账号伪装成 Claude Code 时使用。
-// 顺序对齐真实 CLI 2.1.284 的 eP 规则表（283→284 无 beta 集合变化，见各常量注释）。
+// 顺序对齐真实 CLI 2.1.284/285 的 eP 规则表（283→284→285 无 beta 集合与顺序变化，见各常量注释）。
 //
 // 使用建议：
 //   - OAuth mimic：所有模型（包括 Haiku）都使用这整份列表。
@@ -144,12 +145,14 @@ func DefaultHeaders() map[string]string {
 		// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
 		"User-Agent":                  DefaultUserAgent(),
 		"X-Stainless-Lang":            "js",
-		"X-Stainless-Package-Version": "0.113.0",
-		"X-Stainless-OS":              "Linux",
-		"X-Stainless-Arch":            "arm64",
-		"X-Stainless-Runtime":         "node",
-		// 真实 Claude Code 2.1.284 内嵌 Bun 运行时报告 process.version=v26.3.0
-		//（2026-09-28 本机 2.1.284 二进制 strings 实证；2.1.283 同为 v26.3.0）。
+		// 真实 Claude Code 2.1.285 内嵌 SDK 版本（2026-09-30 二进制 strings 实证；
+		// 282→285 跨 0.113.0 → 0.127.0 三个版本）。运行时不变：Bun 1.4.3 / v26.3.0。
+		"X-Stainless-Package-Version":               "0.127.0",
+		"X-Stainless-OS":                            "Linux",
+		"X-Stainless-Arch":                          "arm64",
+		"X-Stainless-Runtime":                       "node",
+		// 真实 Claude Code 2.1.285 内嵌 Bun 运行时报告 process.version=v26.3.0
+		//（2026-09-30 本机 2.1.285 二进制 strings 实证；2.1.283/284 同为 v26.3.0）。
 		"X-Stainless-Runtime-Version":               "v26.3.0",
 		"X-Stainless-Retry-Count":                   "0",
 		"X-Stainless-Timeout":                       "600",

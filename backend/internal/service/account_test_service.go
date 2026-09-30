@@ -3165,7 +3165,6 @@ func (s *AccountTestService) testOpenAIImageOAuth(c *gin.Context, ctx context.Co
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("OpenAI-Beta", "responses=experimental")
 	if direct {
 		req.Header.Del("OpenAI-Beta")
 		req.Header.Set("Accept", "application/json")

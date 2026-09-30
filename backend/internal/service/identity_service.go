@@ -124,11 +124,11 @@ func defaultFingerprint() Fingerprint {
 	return Fingerprint{
 		UserAgent:               claude.DefaultUserAgent(),
 		StainlessLang:           "js",
-		StainlessPackageVersion: "0.113.0",
+		StainlessPackageVersion: "0.127.0",
 		StainlessOS:             "Linux",
 		StainlessArch:           "arm64",
 		StainlessRuntime:        "node",
-		// 对齐真实 Claude Code 2.1.284（内嵌 Bun v1.4.3 报 v26.3.0）。
+		// 对齐真实 Claude Code 2.1.285（内嵌 Bun v1.4.3 报 v26.3.0）。
 		StainlessRuntimeVersion: "v26.3.0",
 	}
 }
