@@ -1850,8 +1850,6 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 		if !parsed.Stream {
 			upstreamReq.Header.Set("Accept", "application/json")
 		}
-	} else {
-		upstreamReq.Header.Set("OpenAI-Beta", "responses=experimental")
 	}
 
 	proxyURL := ""

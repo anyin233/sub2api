@@ -19,11 +19,13 @@ var effortFamilies = []struct {
 	{family: "claude-mythos-5", levels: effortLowMediumHighXHighMax},
 	{family: "claude-fable-5", levels: effortLowMediumHighXHighMax},
 	{family: "claude-sonnet-4-6", levels: effortLowMediumHighMax},
+	{family: "claude-sonnet-5-5", levels: effortLowMediumHighXHighMax},
 	{family: "claude-sonnet-5", levels: effortLowMediumHighXHighMax},
 	{family: "claude-opus-4-8", levels: effortLowMediumHighXHighMax},
 	{family: "claude-opus-4-7", levels: effortLowMediumHighXHighMax},
 	{family: "claude-opus-4-6", levels: effortLowMediumHighMax},
 	{family: "claude-opus-4-5", levels: effortLowMediumHigh},
+	{family: "claude-opus-5-5", levels: effortLowMediumHighXHighMax},
 	{family: "claude-opus-5", levels: effortLowMediumHighXHighMax},
 }
 
@@ -39,6 +41,25 @@ func EffortLevelsForModel(model string) []string {
 	return nil
 }
 
+// IsOpus55 identifies the fixed Opus 5.5 ID after provider/local suffix normalization.
+func IsOpus55(model string) bool {
+	return normalizeEffortModelID(model) == "claude-opus-5-5"
+}
+
+// IsSonnet55 identifies the fixed Sonnet 5.5 ID after provider/local suffix
+// normalization. Sonnet 5.5 shares Opus 5.5's adaptive-thinking-only protocol
+// (rejects_disabled_thinking, forced tool_choice rejected), without fast mode.
+func IsSonnet55(model string) bool {
+	return normalizeEffortModelID(model) == "claude-sonnet-5-5"
+}
+
+// RequiresAdaptiveThinking reports whether the model rejects
+// thinking.type=disabled/enabled and forced tool_choice (opus-5-5 / sonnet-5-5,
+// both carry the rejects_disabled_thinking capability in the official catalog).
+func RequiresAdaptiveThinking(model string) bool {
+	return IsOpus55(model) || IsSonnet55(model)
+}
+
 func normalizeEffortModelID(model string) string {
 	id := strings.ToLower(strings.TrimSpace(model))
 	id = strings.TrimPrefix(id, "models/")
@@ -47,6 +68,11 @@ func normalizeEffortModelID(model string) string {
 	}
 	id = strings.TrimPrefix(id, "anthropic.")
 	id = strings.TrimSuffix(id, "-thinking")
+	// OpenRouter uses a dotted minor version for this exact Opus 5.5 ID.
+	// Normalize it before effort, thinking, and billing family lookups.
+	if id == "claude-opus-5.5" {
+		id = "claude-opus-5-5"
+	}
 	if mapped, ok := ModelIDReverseOverrides[id]; ok {
 		id = mapped
 	}

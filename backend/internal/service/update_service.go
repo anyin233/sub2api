@@ -30,7 +30,9 @@ var (
 const (
 	updateCacheKey = "update_check_cache"
 	updateCacheTTL = 1200 // 20 minutes
-	githubRepo     = "Wei-Shaw/sub2api"
+	// 分叉独立版本机制：更新检查 / 回滚候选一律指向本分叉仓库，绝不跟随上游
+	// Wei-Shaw/sub2api 的 release（否则官方镜像会经面板更新通道覆盖我们的指纹补丁）。
+	githubRepo = "anyin233/sub2api"
 
 	// Security: allowed download domains for updates
 	allowedDownloadHost = "github.com"

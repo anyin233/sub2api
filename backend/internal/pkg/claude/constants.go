@@ -18,6 +18,14 @@ const (
 	BetaTokenCounting            = "token-counting-2024-11-01"
 	BetaContext1M                = "context-1m-2025-08-07"
 	BetaFastMode                 = "fast-mode-2026-02-01"
+	// Compaction beta 字段族：OMP (oh-my-pi) 等 SDK 的 server-side compaction
+	// (body.compaction / context_management.edits[type=compact_20260112] /
+	// 回放块 {type:"compaction",content,signature}) 依赖这两个 token。
+	// 真实 Claude Code CLI 不发送它们（不属于 CC 指纹），因此不加入
+	// FullClaudeCodeMimicryBetas；仅当客户端显式请求时在 mimic 路径窄口径
+	// 透传（与上游 PR #7638 structured-outputs 的先例同模式）。
+	BetaCompaction       = "compact-2026-09-04"
+	BetaCompactionLegacy = "compact-2026-01-12"
 
 	// 新增（对齐官方 CLI 2.1.9x 以来的流量）
 	BetaPromptCachingScope          = "prompt-caching-scope-2026-01-05"
@@ -27,6 +35,16 @@ const (
 	BetaThinkingBindingControls     = "thinking-binding-controls-2026-08-01"
 	BetaMidConversationOutputConfig = "mid-conversation-output-config-2026-07-01"
 	BetaExtendedCacheTTL            = "extended-cache-ttl-2025-04-11"
+
+	// 新增（对齐官方 CLI 2.1.284 的内置模型目录与 eP/nP beta 规则表：283→284
+	// beta 集合零新增，仅移除 legacy compact token；下述 beta 维持 2.1.283 逆向结果）：
+	// 以下 beta 在首方 OAuth + agentic + interleaved thinking
+	// 的标准请求形态下会被真实 CLI 携带。
+	BetaThinkingTokenCount     = "thinking-token-count-2026-05-13"     // first-party && interleaved thinking
+	BetaPromptCachingEvict     = "prompt-caching-evict-2026-05-12"     // evictCacheOnComplete 路径
+	BetaThinkingResumption     = "thinking-resumption-2026-07-17"      // thinking resumable
+	BetaThinkingDisplayUpdates = "thinking-display-updates-2026-08-18" // thinking display updates
+	BetaMidConversationSystem  = "mid-conversation-system-2026-04-07"  // opus-5-5 等模型 capability
 
 	// server-side refusal fallback beta 字段族（beta Messages API 专有）。
 	// 客户端（Claude Code / SDK / OpenCode 等）会默认透传 body.fallbacks /
@@ -44,8 +62,10 @@ const (
 // 这些 token 是客户端特有的，不应透传给上游 API。
 var DroppedBetas = []string{}
 
-// DefaultBetaHeader Claude Code 客户端默认的 anthropic-beta header
-const DefaultBetaHeader = BetaClaudeCode + "," + BetaOAuth + "," + BetaInterleavedThinking + "," + BetaFineGrainedToolStreaming
+// DefaultBetaHeader Claude Code 客户端默认的 anthropic-beta header。
+// 真实 CLI 2.1.284 已不再发送 fine-grained-tool-streaming（二进制实证 0 次出现，
+// 2.1.283 起即如此），与 283/284 的 eP 规则表对齐后移除。
+const DefaultBetaHeader = BetaClaudeCode + "," + BetaOAuth + "," + BetaInterleavedThinking
 
 // MessageBetaHeaderNoTools /v1/messages 在无工具时的 beta header
 //
@@ -65,8 +85,9 @@ const CountTokensBetaHeader = BetaClaudeCode + "," + BetaOAuth + "," + BetaInter
 // OAuth mimic 路径统一使用 FullClaudeCodeMimicryBetas。
 const HaikuBetaHeader = BetaOAuth + "," + BetaInterleavedThinking
 
-// APIKeyBetaHeader API-key 账号建议使用的 anthropic-beta header（不包含 oauth）
-const APIKeyBetaHeader = BetaClaudeCode + "," + BetaInterleavedThinking + "," + BetaFineGrainedToolStreaming
+// APIKeyBetaHeader API-key 账号建议使用的 anthropic-beta header（不包含 oauth）。
+// fine-grained-tool-streaming 已随 2.1.283 从真实 CLI 流量中消失（284 沿用），不再注入。
+const APIKeyBetaHeader = BetaClaudeCode + "," + BetaInterleavedThinking
 
 // APIKeyHaikuBetaHeader Haiku 模型在 API-key 账号下使用的 anthropic-beta header（不包含 oauth / claude-code）
 const APIKeyHaikuBetaHeader = BetaInterleavedThinking
@@ -82,11 +103,16 @@ const DefaultCacheControlTTL = "5m"
 //
 // ⚠️ 读取实际生效的版本号请用 CLIVersion()，它会叠加 SUB2API_CLAUDE_CLI_VERSION 覆盖。
 // 直接引用本常量只在"表达内置基线"时才正确（例如覆盖值的下限校验）。
-const CLICurrentVersion = "2.1.258"
+//
+// 分叉基线（opus-5-5 / sonnet-5-5 支持下限）：跟随官方 CLI 当前 stable，2026-09-30
+// 更新为 2.1.285（npm latest 实测；gpt-6.1-sol 发布次日，284→285 beta 集合经二进制
+// 比对无变化，仅版本号推进）。
+// 该基线同时是面板手动值 / 自动同步值 / env 覆盖的统一下限。
+const CLICurrentVersion = "2.1.285"
 
 // FullClaudeCodeMimicryBetas 返回最"像"真实 Claude Code CLI 的完整 beta 列表，
 // 用于 OAuth 账号伪装成 Claude Code 时使用。
-// 顺序与真实 CLI 抓包一致。
+// 顺序对齐真实 CLI 2.1.284/285 的 eP 规则表（283→284→285 无 beta 集合与顺序变化，见各常量注释）。
 //
 // 使用建议：
 //   - OAuth mimic：所有模型（包括 Haiku）都使用这整份列表。
@@ -98,31 +124,41 @@ func FullClaudeCodeMimicryBetas() []string {
 		BetaClaudeCode,
 		BetaOAuth,
 		BetaInterleavedThinking,
-		BetaPromptCachingScope,
-		BetaEffort,
 		BetaContextManagement,
+		BetaPromptCachingScope,
+		BetaThinkingTokenCount,
+		BetaMidConversationSystem,
 		BetaThinkingBindingControls,
-		BetaMidConversationOutputConfig,
+		BetaEffort,
 		BetaExtendedCacheTTL,
 	}
 }
 
 // DefaultHeaders 是 Claude Code 客户端默认请求头。
-var DefaultHeaders = map[string]string{
-	// Keep these in sync with recent Claude CLI traffic to reduce the chance
-	// that Claude Code-scoped OAuth credentials are rejected as "non-CLI" usage.
-	// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
-	"User-Agent":                                "claude-cli/" + CLIVersion() + " (external, cli)",
-	"X-Stainless-Lang":                          "js",
-	"X-Stainless-Package-Version":               "0.94.0",
-	"X-Stainless-OS":                            "Linux",
-	"X-Stainless-Arch":                          "arm64",
-	"X-Stainless-Runtime":                       "node",
-	"X-Stainless-Runtime-Version":               "v24.3.0",
-	"X-Stainless-Retry-Count":                   "0",
-	"X-Stainless-Timeout":                       "600",
-	"X-App":                                     "cli",
-	"Anthropic-Dangerous-Direct-Browser-Access": "true",
+// 每次调用现构造：User-Agent 走 DefaultUserAgent()（运行期可变版本号），
+// 不再在包 init 时固化。同一次请求内应只取一次 UA 字符串并在出站头与
+// billing 两条路径间复用，避免版本缓存翻转瞬间头/体不一致。
+func DefaultHeaders() map[string]string {
+	return map[string]string{
+		// Keep these in sync with recent Claude CLI traffic to reduce the chance
+		// that Claude Code-scoped OAuth credentials are rejected as "non-CLI" usage.
+		// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
+		"User-Agent":                  DefaultUserAgent(),
+		"X-Stainless-Lang":            "js",
+		// 真实 Claude Code 2.1.285 内嵌 SDK 版本（2026-09-30 二进制 strings 实证；
+		// 282→285 跨 0.113.0 → 0.127.0 三个版本）。运行时不变：Bun 1.4.3 / v26.3.0。
+		"X-Stainless-Package-Version":               "0.127.0",
+		"X-Stainless-OS":                            "Linux",
+		"X-Stainless-Arch":                          "arm64",
+		"X-Stainless-Runtime":                       "node",
+		// 真实 Claude Code 2.1.285 内嵌 Bun 运行时报告 process.version=v26.3.0
+		//（2026-09-30 本机 2.1.285 二进制 strings 实证；2.1.283/284 同为 v26.3.0）。
+		"X-Stainless-Runtime-Version":               "v26.3.0",
+		"X-Stainless-Retry-Count":                   "0",
+		"X-Stainless-Timeout":                       "600",
+		"X-App":                                     "cli",
+		"Anthropic-Dangerous-Direct-Browser-Access": "true",
+	}
 }
 
 // Model 表示一个 Claude 模型
@@ -172,10 +208,22 @@ var DefaultModels = []Model{
 		CreatedAt:   "2026-05-29T00:00:00Z",
 	},
 	{
+		ID:          "claude-opus-5-5",
+		Type:        "model",
+		DisplayName: "Claude Opus 5.5",
+		CreatedAt:   "2026-09-22T00:00:00Z",
+	},
+	{
 		ID:          "claude-opus-5",
 		Type:        "model",
 		DisplayName: "Claude Opus 5",
 		CreatedAt:   "2026-07-25T00:00:00Z",
+	},
+	{
+		ID:          "claude-sonnet-5-5",
+		Type:        "model",
+		DisplayName: "Claude Sonnet 5.5",
+		CreatedAt:   "2026-09-28T00:00:00Z",
 	},
 	{
 		ID:          "claude-sonnet-5",

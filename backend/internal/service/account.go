@@ -2020,6 +2020,8 @@ func (a *Account) SupportsOpenAIImageCapability(capability OpenAIImagesCapabilit
 		return false
 	}
 	switch capability {
+	case OpenAIImagesCapabilityAPIKey:
+		return a.Type == AccountTypeAPIKey
 	case OpenAIImagesCapabilityBasic, OpenAIImagesCapabilityNative:
 		return a.Type == AccountTypeOAuth || a.Type == AccountTypeSetupToken || a.Type == AccountTypeAPIKey
 	default:
@@ -2384,11 +2386,13 @@ func (a *Account) IsAnthropicOAuthOrSetupToken() bool {
 }
 
 // IsTLSFingerprintEnabled 检查是否启用 TLS 指纹伪装
-// 仅适用于 Anthropic OAuth/SetupToken 类型账号
-// 启用后将模拟 Claude Code (Node.js) 客户端的 TLS 握手特征
+// 适用于 Anthropic OAuth/SetupToken 与 OpenAI OAuth/SetupToken 类型账号
+// 启用后按平台模拟对应官方 CLI 客户端的 TLS 握手特征：
+//   - Anthropic → Claude Code (Node.js/OpenSSL) 指纹
+//   - OpenAI    → Codex CLI (OpenSSL 3.5) 指纹
 func (a *Account) IsTLSFingerprintEnabled() bool {
-	// 仅支持 Anthropic OAuth/SetupToken 账号
-	if !a.IsAnthropicOAuthOrSetupToken() {
+	// 支持 Anthropic OAuth/SetupToken 与 OpenAI OAuth/SetupToken 账号
+	if !a.IsAnthropicOAuthOrSetupToken() && !a.IsOpenAIOAuthLike() {
 		return false
 	}
 	if a.Extra == nil {

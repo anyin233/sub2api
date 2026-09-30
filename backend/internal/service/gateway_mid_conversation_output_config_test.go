@@ -195,23 +195,23 @@ func TestSanitizeAnthropicBodyForBetaTokens_MidConversationOutputConfig_Idempote
 // ============================================================================
 
 // OAuth mimic 路径真实 request 联动，两 case 明确期望：
-//   - 默认：mimic 固定列表带该 beta → outgoing header 含 token，空控制 system 消息保留；
-//   - policy filter 命中（经 gin context 的 betaPolicyFilterSetKey 缓存注入该 token，
-//     走真实 policy filter/dropSet 路径）→ outgoing header 无 token，空控制 system
-//     消息整条删除。
+//   - 默认：mimic 固定列表（2.1.283 对齐后）不再带 mid-conversation-output-config
+//     beta → outgoing header 无 token，空控制 system 消息整条删除；
+//   - mimic 路径本就忽略客户端 beta：即使客户端显式传入该 token 也不会出现在
+//     outgoing header，空控制 system 消息同样删除（与真实 2.1.283 流量一致）。
 //
 // 两 case 都断言 user 文本、消息数、顶层 effort 原值；期望为显式常量，不引用
 // FullClaudeCodeMimicryBetas（避免把实现列表当 expected）。
 func TestBuildUpstreamRequestOAuthMimic_MidConversationOutputConfig(t *testing.T) {
 	cases := []struct {
 		name              string
-		policyFilterDrops bool
+		clientSendsBeta   bool
 		wantHeaderHasBeta bool
 		wantMsgLen        int
 		wantFieldOnFirst  bool
 	}{
-		{"default_mimic_keeps_beta", false, true, 2, true},
-		{"policy_filter_drops_beta", true, false, 1, false},
+		{"default_mimic_drops_beta", false, false, 1, false},
+		{"mimic_ignores_client_beta", true, false, 1, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -219,8 +219,8 @@ func TestBuildUpstreamRequestOAuthMimic_MidConversationOutputConfig(t *testing.T
 			rec := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(rec)
 			c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
-			if tc.policyFilterDrops {
-				c.Set(betaPolicyFilterSetKey, map[string]struct{}{claude.BetaMidConversationOutputConfig: {}})
+			if tc.clientSendsBeta {
+				c.Request.Header.Set("anthropic-beta", claude.BetaMidConversationOutputConfig)
 			}
 
 			account := &Account{ID: 701, Platform: PlatformAnthropic, Type: AccountTypeOAuth,
