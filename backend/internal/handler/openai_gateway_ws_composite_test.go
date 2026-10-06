@@ -1,13 +1,12 @@
 package handler
 
 import (
-	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
-
 	"context"
 	"errors"
 	"net/http"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	coderws "github.com/coder/websocket"
 	"github.com/stretchr/testify/require"

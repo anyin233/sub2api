@@ -188,7 +188,7 @@ func ensureCodexIdentityHeaders(h http.Header) {
 		h.Set("version", identity.version)
 	}
 	// 2026-09-30：Responses API 已转正，真实 Codex CLI 0.156+ 不再发送
-	// OpenAI-Beta: responses=experimental（0.159.2 二进制实证 0 次出现）。
+	// OpenAI-Beta: responses=experimental（0.160.1 二进制实证 0 次出现）。
 	// 本网关不合成任何 OpenAI-Beta，且在身份恢复点把透传/覆写带入的该头
 	// 一并删除，保证出站身份与真实 CLI 一致（无该头）。
 	h.Del("OpenAI-Beta")
