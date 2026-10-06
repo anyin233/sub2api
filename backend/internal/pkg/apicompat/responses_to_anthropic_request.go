@@ -14,6 +14,9 @@ import (
 // enables Anthropic platform groups to accept OpenAI Responses API requests
 // by converting them to the native /v1/messages format before forwarding upstream.
 func ResponsesToAnthropicRequest(req *ResponsesRequest) (*AnthropicRequest, error) {
+	isOpus55 := claude.IsOpus55(req.Model)
+	isSonnet55 := claude.IsSonnet55(req.Model)
+	_ = isOpus55
 	system, messages, err := convertResponsesInputToAnthropic(req.Instructions, req.Input, claude.RequiresAdaptiveThinking(req.Model))
 	if err != nil {
 		return nil, err

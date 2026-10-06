@@ -559,7 +559,6 @@ func (s *GatewayService) computeFinalAnthropicBeta(
 				}
 			}
 			incomingBeta := strings.Join(incomingParts, ",")
-			}
 			return mergeAnthropicBetaDropping(claude.FullClaudeCodeMimicryBetas(), incomingBeta, effectiveDropSet), true
 		}
 		// 真 Claude Code 客户端透传路径

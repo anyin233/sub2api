@@ -435,15 +435,15 @@ func TestOpenAICodexVersionSyncInitialSkipsWhenRecentlySynced(t *testing.T) {
 func TestOpenAICodexVersionSyncInitialRunsWhenStaleOrMissing(t *testing.T) {
 	t.Run("同步值已过期", func(t *testing.T) {
 		repo := newCodexVersionSyncSettingRepoStub(map[string]string{
-			SettingKeyOpenAICodexClientVersionSynced: "0.160.1",
+			SettingKeyOpenAICodexClientVersionSynced: "0.159.3",
 		})
 		repo.updatedAt = time.Now().Add(-7 * time.Hour)
-		github := &codexVersionSyncGitHubStub{releases: []*GitHubRelease{{TagName: "rust-v0.159.3"}}}
+		github := &codexVersionSyncGitHubStub{releases: []*GitHubRelease{{TagName: "rust-v0.160.1"}}}
 
 		newCodexVersionSyncService(repo, github).runInitial()
 
 		require.Equal(t, 1, github.calls)
-		require.Equal(t, []string{"0.159.3"}, repo.syncedWrites())
+		require.Equal(t, []string{"0.160.1"}, repo.syncedWrites())
 	})
 
 	// 首次部署尚无同步值：必须立刻同步，不能被防抖挡住。

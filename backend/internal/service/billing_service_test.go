@@ -2055,7 +2055,6 @@ func TestNewModelPricingCatalogFallbackAndContext(t *testing.T) {
 				require.False(t, cost.LongContextBillingApplied)
 			})
 		}
->>>>>>> origin/main
 	}
 }
 
@@ -2117,8 +2116,9 @@ func TestSonnet55PricingFallbackAndFastExclusion(t *testing.T) {
 	require.Equal(t, 4e-6, prices.CacheCreation1hPrice)
 	require.Equal(t, 0.2e-6, prices.CacheReadPricePerToken)
 
-	// Sonnet 5.5 没有 Fast 档：applyModelSpecificPricingPolicyEx 不得附加 2x 倍率。
-	require.Nil(t, prices.FastMultiplier)
+	// Sonnet 5.5 没有 Fast 档：fallback 显式 FastMultiplier=1.0，不吃通用 2x。
+	require.NotNil(t, prices.FastMultiplier)
+	require.Equal(t, 1.0, *prices.FastMultiplier)
 	fast, err := svc.CalculateCostWithServiceTier("claude-sonnet-5-5", UsageTokens{InputTokens: 1_000_000, OutputTokens: 1000}, 1, "fast")
 	require.NoError(t, err)
 	plain, err := svc.CalculateCostWithServiceTier("claude-sonnet-5-5", UsageTokens{InputTokens: 1_000_000, OutputTokens: 1000}, 1, "")

@@ -89,8 +89,11 @@ const CountTokensBetaHeader = BetaClaudeCode + "," + BetaOAuth + "," + BetaInter
 const HaikuBetaHeader = BetaOAuth + "," + BetaInterleavedThinking
 
 // APIKeyBetaHeader API-key 账号建议使用的 anthropic-beta header（不包含 oauth）。
-// fine-grained-tool-streaming 已随 2.1.283 从真实 CLI 流量中消失（284 沿用），不再注入。
-const APIKeyBetaHeader = BetaClaudeCode + "," + BetaInterleavedThinking
+// 真实 CLI 2.1.283+ 不再全局携带 fine-grained-tool-streaming，但 sonnet-5-5 的
+// computer/browser toolset 依赖 per-tool eager_input_streaming（上游 8490a8186）：
+// 注入该 token 供 sonnet-5-5+newer-toolset 场景命中，其余场景由
+// filterSonnet55ToolsetBeta 在 toolset 命中时主动剔除（与能力对称）。
+const APIKeyBetaHeader = BetaClaudeCode + "," + BetaInterleavedThinking + "," + BetaFineGrainedToolStreaming
 
 // APIKeyHaikuBetaHeader Haiku 模型在 API-key 账号下使用的 anthropic-beta header（不包含 oauth / claude-code）
 const APIKeyHaikuBetaHeader = BetaInterleavedThinking

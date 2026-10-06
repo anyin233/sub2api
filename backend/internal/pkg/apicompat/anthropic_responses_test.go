@@ -1847,7 +1847,11 @@ func TestOpus55ResponsesAdaptiveThinkingAndToolChoice(t *testing.T) {
 			require.Equal(t, "adaptive", out.Thinking.Type)
 			require.Zero(t, out.Thinking.BudgetTokens)
 			if effort == "" {
-				effort = "medium"
+				if model == "claude-sonnet-5-5" {
+					effort = "high" // sonnet-5-5 默认档为 high（上游 0.2.13 官方对齐）
+				} else {
+					effort = "medium"
+				}
 			}
 			require.Equal(t, effort, out.OutputConfig.Effort)
 		}
@@ -1856,7 +1860,12 @@ func TestOpus55ResponsesAdaptiveThinkingAndToolChoice(t *testing.T) {
 			require.ErrorContains(t, err, "forced tool_choice")
 		}
 		_, err := ResponsesToAnthropicRequest(&ResponsesRequest{Model: model, Input: json.RawMessage(`"hello"`), Reasoning: &ResponsesReasoning{Effort: "none"}})
-		require.ErrorContains(t, err, "reasoning effort")
+		if model == "claude-sonnet-5-5" {
+			// sonnet-5-5 支持 effort=none → thinking.type=between_tools（上游 0.2.13）
+			require.NoError(t, err)
+		} else {
+			require.ErrorContains(t, err, "reasoning effort")
+		}
 	}
 	old, err := ResponsesToAnthropicRequest(&ResponsesRequest{Model: "claude-opus-5", Input: json.RawMessage(`"hello"`), Reasoning: &ResponsesReasoning{Effort: "xhigh"}})
 	require.NoError(t, err)

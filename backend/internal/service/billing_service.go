@@ -445,6 +445,20 @@ func (s *BillingService) initFallbackPricing() {
 		CacheReadPricePerToken:     0.2e-6,
 		CacheCreation5mPrice:       2.5e-6,
 		CacheCreation1hPrice:       4e-6,
+		// 官方未提供 sonnet-5-5 Fast 档：显式 1.0 让 non-priority fast tier 不吃
+		// 通用 2x（ConfigureServiceTierMultiplier 见 configuredServiceTierMultiplier），
+		// 渠道显式配置的 FastMultiplier 仍会覆盖（GetModelPricingWithChannel）。
+		FastMultiplier:             func() *float64 { v := 1.0; return &v }(),
+		SupportsCacheBreakdown:     true,
+	}
+	s.fallbackPrices["claude-sonnet-5"] = &ModelPricing{
+		InputPricePerToken:         2e-6,
+		OutputPricePerToken:        10e-6,
+		CacheCreationPricePerToken: 2.5e-6,
+		CacheCreation5mPrice:       2.5e-6,
+		CacheCreation1hPrice:       4e-6,
+		CacheReadPricePerToken:     0.2e-6,
+		FastMultiplier:             func() *float64 { v := 1.0; return &v }(),
 		SupportsCacheBreakdown:     true,
 	}
 
@@ -1041,6 +1055,15 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 		return s.fallbackPrices["claude-3-opus"]
 	}
 	if strings.Contains(modelLower, "sonnet") {
+		// sonnet-5 与 sonnet-5.5 同为官方 tier_2_10（$2/$10 per MTok）。
+		// 版本段匹配用 dash 边界："claude-sonnet-4-20250514" 也含 "5"（日期），
+		// 裸 Contains("5") 会误中；限定 "-5-5" 已由 IsSonnet55 提前返回，"-5."/"-5" 开头的
+		// 版本段才算 5 家族。余下含 "4" 的归 sonnet-4，其余 3.x 归 claude-3-5-sonnet。
+		isSonnet5Family := strings.Contains(modelLower, "sonnet-5-5") || strings.Contains(modelLower, "sonnet-5.5") ||
+			strings.Contains(modelLower, "sonnet-5") && !strings.Contains(modelLower, "sonnet-4") && !strings.Contains(modelLower, "3-5-sonnet") && !strings.Contains(modelLower, "3.5-sonnet")
+		if isSonnet5Family {
+			return s.fallbackPrices["claude-sonnet-5"]
+		}
 		if strings.Contains(modelLower, "4") && !strings.Contains(modelLower, "3") {
 			return s.fallbackPrices["claude-sonnet-4"]
 		}
