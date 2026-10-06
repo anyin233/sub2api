@@ -173,7 +173,22 @@ type Model struct {
 }
 
 // DefaultModels Claude Code 客户端支持的默认模型列表
+// mythos 家族（2026-10-06 CC 2.1.291 内嵌目录新增，first-party-only：provider_ids
+// bedrock/vertex/foundry 均为 null）监督 OAuth 出站可见性使用；无公开定价，
+// billing fallback 留空（命中时按上游响应计费）。
 var DefaultModels = []Model{
+	{
+		ID:          "claude-mythos-5-1",
+		Type:        "model",
+		DisplayName: "Claude Mythos 5.1",
+		CreatedAt:   "2026-10-06T00:00:00Z",
+	},
+	{
+		ID:          "claude-mythos-5",
+		Type:        "model",
+		DisplayName: "Claude Mythos 5",
+		CreatedAt:   "2026-01-01T00:00:00Z",
+	},
 	{
 		ID:          "claude-fable-5-1",
 		Type:        "model",
