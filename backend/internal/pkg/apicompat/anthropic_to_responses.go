@@ -485,8 +485,13 @@ func boolPtr(v bool) *bool {
 
 // isReasoningModel reports whether model is a reasoning model that does not
 // support sampling parameters (temperature, top_p) via the Responses API.
-// All gpt-5.x models are reasoning-only; the Responses API returns
-// "Unsupported parameter: temperature" if these fields are present.
+// GPT-5 and every later generation are reasoning-only; the Responses API
+// returns "Unsupported parameter: temperature" if these fields are present.
+//
+// Keyed on the generation number instead of a "gpt-5" prefix: pinning the
+// prefix meant each new family (gpt-6-astra and whatever follows) silently
+// fell through to the sampling branch and failed upstream on every compat
+// request until someone edited this line.
 func isReasoningModel(model string) bool {
 	major, ok := openAIModelGeneration(model)
 	return (ok && major >= 5) || openai.IsGPT6SolOrLunaModelSpelling(model)

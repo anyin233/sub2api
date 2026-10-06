@@ -69,8 +69,28 @@ func ResponsesToAnthropicRequest(req *ResponsesRequest) (*AnthropicRequest, erro
 			return nil, fmt.Errorf("%s does not support forced tool_choice; use auto or none", req.Model)
 		}
 		effort := "medium"
+		if isSonnet55 {
+			effort = "high"
+			if req.Temperature != nil && *req.Temperature != 1 {
+				return nil, fmt.Errorf("claude-sonnet-5-5 does not support non-default temperature")
+			}
+			if req.TopP != nil && (*req.TopP < 0.99 || *req.TopP > 1) {
+				return nil, fmt.Errorf("claude-sonnet-5-5 does not support non-default top_p")
+			}
+		}
 		if req.Reasoning != nil && req.Reasoning.Effort != "" {
 			effort = req.Reasoning.Effort
+		}
+		if isSonnet55 && effort == "none" {
+			// OpenAI's no-reasoning request maps to Sonnet 5.5's lowest
+			// thinking mode. between_tools still preserves signed progress
+			// blocks produced during tool use.
+			out.Thinking = &AnthropicThinking{Type: "between_tools"}
+			if out.OutputConfig == nil {
+				out.OutputConfig = &AnthropicOutputConfig{}
+			}
+			out.OutputConfig.Effort = "low"
+			return out, nil
 		}
 		switch effort {
 		case "low", "medium", "high", "xhigh", "max":
@@ -530,6 +550,14 @@ func convertResponsesUserToAnthropicContent(raw json.RawMessage) (json.RawMessag
 					Source: src,
 				})
 			}
+		case "input_file":
+			src := dataURIToAnthropicFileSource(p.FileData)
+			if src != nil {
+				blocks = append(blocks, AnthropicContentBlock{
+					Type:   "document",
+					Source: src,
+				})
+			}
 		}
 	}
 
@@ -615,6 +643,12 @@ func dataURIToAnthropicImageSource(dataURI string) *AnthropicImageSource {
 		MediaType: mediaType,
 		Data:      data,
 	}
+}
+
+// dataURIToAnthropicFileSource parses a data URI into a document source.
+// file_id-only parts are not convertible here and stay dropped.
+func dataURIToAnthropicFileSource(fileData string) *AnthropicImageSource {
+	return dataURIToAnthropicImageSource(fileData)
 }
 
 // mergeConsecutiveMessages merges consecutive messages with the same role

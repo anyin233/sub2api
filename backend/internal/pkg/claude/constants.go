@@ -27,6 +27,9 @@ const (
 	BetaCompaction       = "compact-2026-09-04"
 	BetaCompactionLegacy = "compact-2026-01-12"
 
+	// Legacy structured output compatibility; forwarded only when explicitly requested.
+	BetaStructuredOutputs = "structured-outputs-2025-11-13"
+
 	// 新增（对齐官方 CLI 2.1.9x 以来的流量）
 	BetaPromptCachingScope          = "prompt-caching-scope-2026-01-05"
 	BetaEffort                      = "effort-2025-11-24"
