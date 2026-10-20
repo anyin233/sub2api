@@ -29,6 +29,9 @@ const (
 
 	// Legacy structured output compatibility; forwarded only when explicitly requested.
 	BetaStructuredOutputs = "structured-outputs-2025-11-13"
+	// Tool-change compatibility tokens; never enabled without an explicit client request.
+	BetaMidConversationToolChanges = "mid-conversation-tool-changes-2026-07-01"
+	BetaInlineTools                = "inline-tools-2026-09-15"
 
 	// 新增（对齐官方 CLI 2.1.9x 以来的流量）
 	BetaPromptCachingScope          = "prompt-caching-scope-2026-01-05"
@@ -149,14 +152,14 @@ func DefaultHeaders() map[string]string {
 		// Keep these in sync with recent Claude CLI traffic to reduce the chance
 		// that Claude Code-scoped OAuth credentials are rejected as "non-CLI" usage.
 		// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
-		"User-Agent":                  DefaultUserAgent(),
-		"X-Stainless-Lang":            "js",
+		"User-Agent":       DefaultUserAgent(),
+		"X-Stainless-Lang": "js",
 		// 真实 Claude Code 2.1.291 内嵌 SDK 版本（2026-10-06 二进制 strings 实证，
 		// TC="0.128.0"；0.127.0 已从 2.1.291 二进制消失）。运行时不变：Bun 1.4.3 / v26.3.0。
-		"X-Stainless-Package-Version":               "0.128.0",
-		"X-Stainless-OS":                            "Linux",
-		"X-Stainless-Arch":                          "arm64",
-		"X-Stainless-Runtime":                       "node",
+		"X-Stainless-Package-Version": "0.128.0",
+		"X-Stainless-OS":              "Linux",
+		"X-Stainless-Arch":            "arm64",
+		"X-Stainless-Runtime":         "node",
 		// 真实 Claude Code 2.1.291 内嵌 Bun 运行时报告 process.version=v26.3.0
 		//（2026-10-06 本机 2.1.291 二进制 strings 实证；2.1.283-290 同为 v26.3.0）。
 		"X-Stainless-Runtime-Version":               "v26.3.0",
@@ -269,6 +272,12 @@ var DefaultModels = []Model{
 		Type:        "model",
 		DisplayName: "Claude Haiku 4.5",
 		CreatedAt:   "2025-10-01T00:00:00Z",
+	},
+	{
+		ID:          "claude-haiku-5-5",
+		Type:        "model",
+		DisplayName: "Claude Haiku 5.5",
+		CreatedAt:   "2026-10-07T00:00:00Z",
 	},
 }
 
