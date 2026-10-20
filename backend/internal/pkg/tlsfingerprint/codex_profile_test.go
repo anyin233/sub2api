@@ -89,8 +89,8 @@ func TestCodexProfileValues(t *testing.T) {
 	if len(p.PSKModes) != 1 || p.PSKModes[0] != 1 {
 		t.Fatalf("PSKModes = %v, want [1] (psk_dhe_ke)", p.PSKModes)
 	}
-	if len(p.PointFormats) != 3 {
-		t.Fatalf("PointFormats = %v, want 3 entries", p.PointFormats)
+	if len(p.PointFormats) != 1 || p.PointFormats[0] != 0 {
+		t.Fatalf("PointFormats = %v, want [0] (uncompressed only, codex 0.163.0)", p.PointFormats)
 	}
 	if p.EnableGREASE {
 		t.Fatal("codex profile must not use GREASE")

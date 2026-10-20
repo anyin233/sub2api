@@ -66,6 +66,17 @@ func IsHaiku55(model string) bool {
 	return normalizeEffortModelID(model) == "claude-haiku-5-5"
 }
 
+// IsClaude55 reports whether model belongs to the 5.5 generation (opus/sonnet/haiku).
+// 2.1.304 起这一代模型默认多带 per-turn-control beta，且共享"拒绝手动 thinking"的协议。
+func IsClaude55(model string) bool {
+	return IsOpus55(model) || IsSonnet55(model) || IsHaiku55(model)
+}
+
+// IsSonnet5 identifies the fixed Sonnet 5 (non-5.5) ID.
+func IsSonnet5(model string) bool {
+	return normalizeEffortModelID(model) == "claude-sonnet-5"
+}
+
 func normalizeEffortModelID(model string) string {
 	id := strings.ToLower(strings.TrimSpace(model))
 	id = strings.TrimPrefix(id, "models/")

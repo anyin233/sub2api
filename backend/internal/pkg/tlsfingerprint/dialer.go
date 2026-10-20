@@ -54,7 +54,9 @@ type SOCKS5ProxyDialer struct {
 
 // Default TLS fingerprint values captured from Claude Code (Node.js 24.x)
 // Captured via tls-fingerprint-web capture server
-// JA3 Hash: 44f88fca027f27bab4bb08d4af15f23e
+// 2026-10-20 复核（Claude Code 2.1.304 native，linux-arm64 + darwin-arm64 一致）
+// JA3: 771,4865-4866-4867-...-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43,4588-29-23-24,0
+// JA3 Hash: 1523504b38f0fae0d881d4b6554aac1b
 // JA4:      t13d1714h1_5b57614c22b0_7baf387fc6ff
 var (
 	// defaultCipherSuites contains the 17 cipher suites from Node.js 24.x
@@ -108,7 +110,9 @@ var (
 		0, // uncompressed
 	}
 
-	// defaultSignatureAlgorithms contains the 9 signature algorithms from Node.js 24.x
+	// defaultSignatureAlgorithms contains the 11 signature algorithms from Claude Code 2.1.304
+	// (Node.js 24.x / Bun, linux-arm64 与 darwin-arm64 抓包一致：在 2.1.29x 的 9 个之后
+	// 追加 rsa_pss_pss_sha256 与 ecdsa_secp521r1_sha512，rsa_pkcs1_sha1 仍居末位)。
 	defaultSignatureAlgorithms = []utls.SignatureScheme{
 		0x0403, // ecdsa_secp256r1_sha256
 		0x0804, // rsa_pss_rsae_sha256
@@ -118,6 +122,8 @@ var (
 		0x0501, // rsa_pkcs1_sha384
 		0x0806, // rsa_pss_rsae_sha512
 		0x0601, // rsa_pkcs1_sha512
+		0x0807, // rsa_pss_pss_sha256
+		0x0603, // ecdsa_secp521r1_sha512
 		0x0201, // rsa_pkcs1_sha1
 	}
 )
@@ -315,9 +321,10 @@ func toUTLSCurves(curves []uint16) []utls.CurveID {
 
 // defaultExtensionOrder is the Node.js 24.x extension order.
 // Used when Profile.Extensions is empty.
+// 2.1.304 native binary 抓包（Linux/macOS 一致）不含 encrypted_client_hello(65037)，
+// 顺序为 0,23,65281,10,11,35,16,5,13,18,51,45,43。
 var defaultExtensionOrder = []uint16{
 	0,     // server_name
-	65037, // encrypted_client_hello
 	23,    // extended_master_secret
 	65281, // renegotiation_info
 	10,    // supported_groups

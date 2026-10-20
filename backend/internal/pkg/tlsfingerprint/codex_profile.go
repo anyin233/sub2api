@@ -2,10 +2,12 @@ package tlsfingerprint
 
 // 内置 Codex (OpenAI 官方 CLI) TLS 指纹 profile。
 //
-// 数值来源：本机 codex-cli 0.155.1 (darwin/arm64) 对本地 capture server 的
-// ClientHello 抓包（两次独立运行逐字节一致，2026-09-23）：
+// 数值来源：codex-cli 0.163.0 (linux-arm64, rust-v0.163.0) 对本地 capture server 的
+// ClientHello 抓包（2026-10-20 复核：cipher/curve/extension/sigalg 与 0.155.1 完全一致，
+// 唯一差异是 ec_point_formats 只发 uncompressed）。
+// ClientHello 抓包（2026-10-20 复核，codex 0.163.0 linux-arm64，两次独立运行一致）：
 //
-//	JA3 md5: e0dc6f56079e7908e6dd8c7459781b1d
+//	JA3 md5: 0b85eb0d4981e69064e40753e4f0ac5f
 //	ciphers(30): 1302 1303 1301 c02c c030 009f cca9 cca8 ccaa c02b c02f 009e
 //	             c024 c028 006b c023 c027 0067 c00a c014 0039 c009 c013 0033
 //	             009d 009c 003d 003c 0035 002f
@@ -20,7 +22,7 @@ package tlsfingerprint
 //	sig algs(26): 0905 0906 0904 0403 0503 0603 0807 0808 081a 081b 081c
 //	             0809 080a 080b 0804 0805 0806 0401 0501 0601 0303 0301
 //	             0302 0402 0502 0602
-//	versions   : TLS 1.3 + 1.2；psk_modes: [dhe]；ec_point_formats: [0,1,2]
+//	versions   : TLS 1.3 + 1.2；psk_modes: [dhe]；ec_point_formats: [0]
 //
 // 已用与 sub2api 同版本锁定的 utls 构建复现该 ClientHello 并与抓包逐字节
 // 一致（key_share 内随机密钥除外，属预期差异）。
@@ -102,8 +104,9 @@ var codexSignatureAlgorithms = []uint16{
 	0x0402, 0x0502, 0x0602, // rsa_pkcs1_sha1/224
 }
 
-// codexPointFormats 抓包所得 ec_point_formats: [uncompressed, prime, char2]。
-var codexPointFormats = []uint16{0, 1, 2}
+// codexPointFormats 抓包所得 ec_point_formats: 仅 uncompressed（0.163.0 起；
+// 0.155.1 抓包曾为 [0,1,2]，utls 复现 jA3 以当前抓包为准）。
+var codexPointFormats = []uint16{0}
 
 // codexExtensionOrder 抓包所得扩展顺序（无 ALPN！）。
 var codexExtensionOrder = []uint16{

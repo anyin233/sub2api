@@ -143,8 +143,8 @@ func TestJA3Fingerprint(t *testing.T) {
 		t.Logf("Warning: JA3 does not contain expected TLS 1.3 cipher suites")
 	}
 
-	// Verify extension list (14 extensions, Node.js 24.x order)
-	expectedExtensions := "0-65037-23-65281-10-11-35-16-5-13-18-51-45-43"
+	// Verify extension list (13 extensions, Node.js 24.x order, no ECH since 2.1.304)
+	expectedExtensions := "0-23-65281-10-11-35-16-5-13-18-51-45-43"
 	if strings.Contains(fpResp.TLS.JA3, expectedExtensions) {
 		t.Logf("✓ JA3 contains expected extension list: %s", expectedExtensions)
 	} else {

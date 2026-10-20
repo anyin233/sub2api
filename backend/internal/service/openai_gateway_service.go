@@ -61,10 +61,11 @@ const (
 	// 陈旧版本会被优先丢弃（HTTP 200 + 流内 server_is_overloaded）；非官方客户端配不出
 	// 官方身份时整体回退到本常量，因此它必须跟随官方 CLI 的当前发布版本，
 	// 落后多个版本会让这些请求稳定落在被优先丢弃的一侧。
-	// 2026-10-06 对齐官方最新稳定版 rust-v0.160.1（openai/codex releases）。
+	// 2026-10-20 对齐官方最新稳定版 rust-v0.163.0（openai/codex releases latest，
+	// 本机 native 安装 codex-cli 0.163.0 实测 UA/version 一致）。
 	// 注意 0.156 起真实客户端已不再发送 OpenAI-Beta: responses=experimental
 	// （Responses API 转正，0.160.1 二进制实证 0 次出现），出站身份头不得再携带。
-	codexCLIVersion = "0.160.1"
+	codexCLIVersion = "0.163.0"
 	// Codex 限额快照仅用于后台展示/诊断，不需要每个成功请求都立即落库。
 	openAICodexSnapshotPersistMinInterval = 30 * time.Second
 	// 配额自动暂停时，超过该时长仍未刷新的 used% 快照视为陈旧，不再据此暂停账号。

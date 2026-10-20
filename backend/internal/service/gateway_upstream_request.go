@@ -591,10 +591,13 @@ func (s *GatewayService) computeFinalAnthropicBeta(
 		if mimicClaudeCode {
 			// mimic 路径跳过白名单透传，incomingBeta 默认为空；所有模型都必须
 			// 携带完整 Claude Code beta 集合，避免 Haiku 被识别为第三方客户端。
+			// 基础集合按模型裁剪（5.5 家族/fable-5-1 多带 per-turn-control，
+			// sonnet-5 不带 mid-conversation-tool-changes），对齐 2.1.304 实测。
 			// 窄口径兼容(不动 CC 指纹集合)：客户端显式请求下列能力时透传对应
 			// 兼容 token——server-side compaction（OMP 等 SDK；BetaCompaction 不属于
-			// CC 指纹）、legacy structured output（上游 0.2.11 起）、以及上游
-			// v0.2.17 起新增的 mid-conversation tool changes / inline tools。
+			// CC 指纹）、legacy structured output（上游 0.2.11 起）、mid-conversation
+			// tool changes / inline tools（上游 v0.2.17 起），以及 2.1.304 起不再
+			// 默认携带的 mid-conversation-system / clear-at / thinking-binding-controls。
 			// 这些都只是能力开关，不会触发第三方判定；缺 token 时对应 body 字段
 			// 会被上游 400。Unknown client betas remain excluded; policy drops still apply.
 			var incomingParts []string
@@ -604,13 +607,16 @@ func (s *GatewayService) computeFinalAnthropicBeta(
 				claude.BetaStructuredOutputs,
 				claude.BetaMidConversationToolChanges,
 				claude.BetaInlineTools,
+				claude.BetaMidConversationSystem,
+				claude.BetaMidConversationSystemClearAt,
+				claude.BetaThinkingBindingControls,
 			} {
 				if containsBetaToken(clientBeta, token) {
 					incomingParts = append(incomingParts, token)
 				}
 			}
 			incomingBeta := strings.Join(incomingParts, ",")
-			return mergeAnthropicBetaDropping(claude.FullClaudeCodeMimicryBetas(), incomingBeta, effectiveDropSet), true
+			return mergeAnthropicBetaDropping(claude.ClaudeCodeMimicryBetasForModel(modelID), incomingBeta, effectiveDropSet), true
 		}
 		// 真 Claude Code 客户端透传路径
 		return stripBetaTokensWithSet(s.getBetaHeader(modelID, clientBeta), effectiveDropSet), true
@@ -660,7 +666,7 @@ func (s *GatewayService) computeFinalCountTokensAnthropicBeta(
 			// 分支上**不**会跳过白名单透传（与 messages mimic 路径不同），所以
 			// incomingBeta = req.Header[anthropic-beta] = 客户端透传过来的 client beta。
 			// 重构后直接从 clientHeaders 拿同一个值，保持行为一致。
-			requiredBetas := append(claude.FullClaudeCodeMimicryBetas(), claude.BetaTokenCounting)
+			requiredBetas := append(claude.ClaudeCodeMimicryBetasForModel(modelID), claude.BetaTokenCounting)
 			return mergeAnthropicBetaDropping(requiredBetas, clientBeta, effectiveDropSet), true
 		}
 		if clientBeta == "" {

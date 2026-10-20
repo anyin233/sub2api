@@ -33,6 +33,14 @@ const (
 	BetaMidConversationToolChanges = "mid-conversation-tool-changes-2026-07-01"
 	BetaInlineTools                = "inline-tools-2026-09-15"
 
+	// 2.1.30x 新增：per-turn-control 由 5.5 家族与 fable-5-1 默认携带（真实 CLI 抓包
+	// 实证：opus/sonnet/haiku-5-5、fable-5-1 有，opus-5 / opus-4-8 / fable-5 / mythos-5 无）。
+	BetaPerTurnControl = "per-turn-control-2026-07-01"
+	// 2.1.30x 起所有模型默认携带的 advanced tool use 能力开关。
+	BetaAdvancedToolUse = "advanced-tool-use-2025-11-20"
+	// mid-conversation-system 的新版本号（clear-at），仅在客户端显式请求时透传。
+	BetaMidConversationSystemClearAt = "mid-conversation-system-clear-at-2026-08-21"
+
 	// 新增（对齐官方 CLI 2.1.9x 以来的流量）
 	BetaPromptCachingScope          = "prompt-caching-scope-2026-01-05"
 	BetaEffort                      = "effort-2025-11-24"
@@ -113,34 +121,93 @@ const DefaultCacheControlTTL = "5m"
 // ⚠️ 读取实际生效的版本号请用 CLIVersion()，它会叠加 SUB2API_CLAUDE_CLI_VERSION 覆盖。
 // 直接引用本常量只在"表达内置基线"时才正确（例如覆盖值的下限校验）。
 //
-// 分叉基线（opus-5-5 / sonnet-5-5 支持下限）：跟随官方 CLI 当前 stable，2026-10-06
-// 更新为 2.1.291（npm latest 实测；285→291 beta 集合经二进制 strings 比对零变化，
-// 仅 Stainless SDK 0.127.0 → 0.128.0 与版本号推进；mythos 家族 catalog 新增）。
+// 分叉基线（opus-5-5 / sonnet-5-5 支持下限）：跟随官方 CLI 当前 stable，2026-10-20
+// 更新为 2.1.304（native 通道 downloads.claude.ai/claude-code-releases/latest 实测，
+// 本机 native 安装于 ~/.local/share/claude/versions/2.1.304；与 npm latest 同步）。
+// 2.1.304 实测：X-Stainless-Package-Version 仍 0.128.0、Bun 运行时仍 v26.3.0
+// （284→304 无变化），beta 集合新增 per-turn-control / advanced-tool-use /
+// mid-conversation-tool-changes，并移除默认的 mid-conversation-system /
+// thinking-binding-controls（改为按客户端显式请求透传）。
 // 该基线同时是面板手动值 / 自动同步值 / env 覆盖的统一下限。
-const CLICurrentVersion = "2.1.291"
+const CLICurrentVersion = "2.1.304"
 
 // FullClaudeCodeMimicryBetas 返回最"像"真实 Claude Code CLI 的完整 beta 列表，
 // 用于 OAuth 账号伪装成 Claude Code 时使用。
-// 顺序对齐真实 CLI 2.1.284/285 的 eP 规则表（283→284→285 无 beta 集合与顺序变化，见各常量注释）。
+//
+// 顺序与内容对齐真实 CLI 2.1.304（native binary 抓包实证：OAuth 模式下发往
+// /v1/messages 的 anthropic-beta 默认值，11 个 token 中的 10 个对所有模型一致）。
+// per-turn-control 只由 5.5 家族与 fable-5-1 携带，见 ClaudeCodeMimicryBetasForModel。
 //
 // 使用建议：
-//   - OAuth mimic：所有模型（包括 Haiku）都使用这整份列表。
+//   - OAuth mimic：所有模型（包括 Haiku）都使用 ClaudeCodeMimicryBetasForModel。
 //   - OAuth 真实客户端透传：保留客户端 beta；未提供时使用模型对应默认值。
 //   - API-key 账号：不要使用本函数，参见 APIKeyBetaHeader。
 //   - 不默认加入 redact-thinking，避免上游抹除 thinking 内容；客户端显式传入时由合并逻辑保留。
+//   - mid-conversation-system / thinking-binding-controls / compact / structured-outputs
+//     等能力 beta 已不在 2.1.304 默认集合内，仅在客户端显式请求时透传
+//     （见 computeFinalAnthropicBeta 的兼容白名单）。
 func FullClaudeCodeMimicryBetas() []string {
 	return []string{
 		BetaClaudeCode,
 		BetaOAuth,
 		BetaInterleavedThinking,
+		BetaThinkingTokenCount,
 		BetaContextManagement,
 		BetaPromptCachingScope,
-		BetaThinkingTokenCount,
-		BetaMidConversationSystem,
-		BetaThinkingBindingControls,
+		BetaMidConversationToolChanges,
+		BetaAdvancedToolUse,
 		BetaEffort,
 		BetaExtendedCacheTTL,
 	}
+}
+
+// ClaudeCodeMimicryBetasForModel 返回模型对应的真实 CLI 默认 beta 集合。
+//
+// 与 FullClaudeCodeMimicryBetas 的差异（2.1.304 抓包实证，Linux/macOS 一致）：
+//   - opus-5-5 / sonnet-5-5 / haiku-5-5 / fable-5-1：额外携带 per-turn-control；
+//   - claude-sonnet-5（非 5.5）：不携带 mid-conversation-tool-changes（其余模型都带）。
+func ClaudeCodeMimicryBetasForModel(model string) []string {
+	base := FullClaudeCodeMimicryBetas()
+	if IsSonnet5(model) {
+		base = removeBeta(base, BetaMidConversationToolChanges)
+	}
+	if NeedsPerTurnControl(model) {
+		base = insertBetaAfter(base, BetaPromptCachingScope, BetaPerTurnControl)
+	}
+	return base
+}
+
+// NeedsPerTurnControl 报告模型是否在默认 beta 集合中携带 per-turn-control-2026-07-01。
+func NeedsPerTurnControl(model string) bool {
+	if IsClaude55(model) {
+		return true
+	}
+	return normalizeEffortModelID(model) == "claude-fable-5-1"
+}
+
+func removeBeta(betas []string, target string) []string {
+	out := make([]string, 0, len(betas))
+	for _, b := range betas {
+		if b == target {
+			continue
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+func insertBetaAfter(betas []string, after, value string) []string {
+	for i, b := range betas {
+		if b != after {
+			continue
+		}
+		out := make([]string, 0, len(betas)+1)
+		out = append(out, betas[:i+1]...)
+		out = append(out, value)
+		out = append(out, betas[i+1:]...)
+		return out
+	}
+	return append(append([]string(nil), betas...), value)
 }
 
 // DefaultHeaders 是 Claude Code 客户端默认请求头。

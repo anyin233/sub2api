@@ -23,11 +23,13 @@ func TestBuildUpstreamRequestToolChangeBetas(t *testing.T) {
 		drop                map[string]struct{}
 		wantMid, wantInline bool
 	}{
+		// 2.1.304 起 mid-conversation-tool-changes 进入默认 mimic 集合，
+		// 因此"客户端没请求"不再等于"最终 header 没有"，只有显式 dropSet 才能移除。
 		{"both", mid + "," + inline, nil, true, true},
 		{"mid only", mid, nil, true, false},
-		{"inline only", inline, nil, false, true},
-		{"absent", "", nil, false, false},
-		{"unknown", inline + "-other", nil, false, false},
+		{"inline only", inline, nil, true, true},
+		{"absent", "", nil, true, false},
+		{"unknown", inline + "-other", nil, true, false},
 		{"duplicate", inline + ", " + inline + "," + mid, nil, true, true},
 		{"filter inline", mid + "," + inline, map[string]struct{}{inline: {}}, true, false},
 		{"filter mid", mid + "," + inline, map[string]struct{}{mid: {}}, false, true},

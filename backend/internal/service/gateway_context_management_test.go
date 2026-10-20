@@ -162,8 +162,57 @@ func TestComputeFinalAnthropicBeta_OAuthMimic_NonHaiku_IncludesContextManagement
 		"OAuth mimic non-haiku 必须注入完整 CC mimicry beta，含 context-management-2025-06-27")
 	require.True(t, anthropicBetaTokensContains(final, claude.BetaOAuth))
 	require.True(t, anthropicBetaTokensContains(final, claude.BetaClaudeCode))
-	require.True(t, anthropicBetaTokensContains(final, claude.BetaThinkingBindingControls),
-		"OAuth mimic 必须注入 thinking block binding 所需的 beta")
+	require.True(t, anthropicBetaTokensContains(final, claude.BetaAdvancedToolUse),
+		"2.1.304 起 advanced-tool-use 是默认 beta")
+	require.True(t, anthropicBetaTokensContains(final, claude.BetaMidConversationToolChanges),
+		"2.1.304 起 mid-conversation-tool-changes 是默认 beta")
+	require.False(t, anthropicBetaTokensContains(final, claude.BetaThinkingBindingControls),
+		"2.1.304 默认集合不再携带 thinking-binding-controls，仅在客户端显式请求时透传")
+}
+
+// mimic 路径的白名单透传：2.1.304 起不再默认携带的能力 beta，客户端显式请求时必须保留，
+// 否则 body 里对应字段会被 sanitize 剥离、或上游直接 400。
+func TestComputeFinalAnthropicBeta_OAuthMimic_PassesThroughCapabilityBetas(t *testing.T) {
+	s := newTestGatewayServiceForBeta(false)
+	hdr := http.Header{}
+	hdr.Set("anthropic-beta",
+		claude.BetaMidConversationSystem+","+claude.BetaThinkingBindingControls+","+claude.BetaMidConversationSystemClearAt)
+	final, ok := s.computeFinalAnthropicBeta("oauth", true, "claude-fable-5-1", hdr, []byte(`{}`), nil)
+	require.True(t, ok)
+	for _, beta := range []string{
+		claude.BetaMidConversationSystem,
+		claude.BetaThinkingBindingControls,
+		claude.BetaMidConversationSystemClearAt,
+	} {
+		require.Truef(t, anthropicBetaTokensContains(final, beta),
+			"客户端显式请求的 %s 必须透传（body 字段依赖该 token）", beta)
+	}
+}
+
+// 5.5 家族与 fable-5-1 默认多带 per-turn-control；其他模型不带。
+func TestComputeFinalAnthropicBeta_OAuthMimic_PerTurnControlGatedByModel(t *testing.T) {
+	s := newTestGatewayServiceForBeta(false)
+	withPerTurn := []string{"claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1"}
+	withoutPerTurn := []string{"claude-opus-5", "claude-opus-4-8", "claude-sonnet-5", "claude-fable-5"}
+
+	for _, model := range withPerTurn {
+		final, ok := s.computeFinalAnthropicBeta("oauth", true, model, http.Header{}, []byte(`{}`), nil)
+		require.True(t, ok)
+		require.Truef(t, anthropicBetaTokensContains(final, claude.BetaPerTurnControl),
+			"%s 在 2.1.304 默认携带 per-turn-control", model)
+	}
+	for _, model := range withoutPerTurn {
+		final, ok := s.computeFinalAnthropicBeta("oauth", true, model, http.Header{}, []byte(`{}`), nil)
+		require.True(t, ok)
+		require.Falsef(t, anthropicBetaTokensContains(final, claude.BetaPerTurnControl),
+			"%s 在 2.1.304 不携带 per-turn-control", model)
+	}
+
+	// claude-sonnet-5（非 5.5）默认不带 mid-conversation-tool-changes。
+	final, ok := s.computeFinalAnthropicBeta("oauth", true, "claude-sonnet-5", http.Header{}, []byte(`{}`), nil)
+	require.True(t, ok)
+	require.False(t, anthropicBetaTokensContains(final, claude.BetaMidConversationToolChanges),
+		"claude-sonnet-5 在 2.1.304 默认不携带 mid-conversation-tool-changes")
 }
 
 func TestComputeFinalAnthropicBeta_OAuthMimic_Haiku_IncludesFullClaudeCodeBetas(t *testing.T) {
@@ -186,8 +235,8 @@ func TestComputeFinalAnthropicBeta_OAuthMimic_IgnoresClientBeta(t *testing.T) {
 	require.True(t, ok)
 	require.False(t, strings.Contains(final, "custom-experimental-beta"),
 		"mimic 路径必须忽略客户端 anthropic-beta header")
-	require.True(t, anthropicBetaTokensContains(final, claude.BetaMidConversationSystem),
-		"mimic 必须注入 mid-conversation system 消息所需的 beta（对齐 2.1.283）")
+	require.True(t, anthropicBetaTokensContains(final, claude.BetaAdvancedToolUse),
+		"mimic 必须注入 2.1.304 默认的 advanced-tool-use beta")
 
 	// 显式 dropSet 仍能移除 mimic 注入的该 beta，且不会因此放行客户端未知 beta。
 	dropped, ok := s.computeFinalAnthropicBeta("oauth", true, "claude-sonnet-4-6", hdr, []byte(`{}`),
